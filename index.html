@@ -933,8 +933,6 @@ function norm() {
   o.customFoods = Array.isArray(o.customFoods) ? o.customFoods : [];
   o.pens = Array.isArray(o.pens) ? o.pens.filter(x => x && x.date && x.mg > 0 && x.qty > 0) : [];
   o.shots = Array.isArray(o.shots) ? o.shots.filter(x => x && x.date && x.mg > 0) : [];
-  // 猛健樂卡片只有自己用:離線網頁版(給親戚)第一次預設收起來,要用到設定裡打開
-  if (S.opts && !S.opts.shotInit) { S.opts.shotInit = true; if (MODE === 'pwa') S.opts.hide.l_shot = true; }
 }
 /* ---- 統計頁 ---- */
 let stN = 14;
