@@ -529,7 +529,7 @@ const snap30 = m => fmtT(Math.round(m / 30) * 30);
 // 沒記錄的那天,預設帶入最近一筆更早的紀錄(通常是前一天)
 function prevSleep(k) {
   const d = Object.keys(LS().sleepLog).filter(x => x < k).sort().pop();
-  return d ? { d, ...S.sleepLog[d] } : null;
+  return d ? { d, ...LS().sleepLog[d] } : null;
 }
 function sleepBody() {
   const e = LS().sleepLog[sel] || {}, p = planFor(sel), pv = e.bed ? null : prevSleep(sel);
@@ -1544,8 +1544,18 @@ function gear(c){
   if(curCat!==c){curCat=c;setOpen=true}else setOpen=!setOpen;
   plan='';msg='';render();
 }
-function setP(c,p){S.cats[c].period=p;plan='';persist();render()}
-function setL(c,v){S.cats[c].limit=Math.max(0,parseFloat(v)||0);persist();render()}
+function setP(c,p){
+  const D=S.cats[c];
+  if(p!==D.period){
+    D.lim=D.lim||{};
+    D.lim[D.period]=D.limit;
+    // 第一次切到另一個週期：週↔月約 4 倍換算，之後各自記住
+    D.limit=D.lim[p]!=null?D.lim[p]:(p==='month'?D.limit*4:Math.max(1,Math.round(D.limit/4)));
+    D.lim[p]=D.limit;
+  }
+  D.period=p;plan='';persist();render()
+}
+function setL(c,v){const D=S.cats[c];D.limit=Math.max(0,parseFloat(v)||0);D.lim=D.lim||{};D.lim[D.period]=D.limit;persist();render()}
 function add(c){
   const C=CATS[c];
   let name=document.getElementById('nm-'+c).value.trim();
