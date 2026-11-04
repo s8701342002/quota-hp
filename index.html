@@ -174,6 +174,8 @@ h3{margin:0;font-size:16px}
 @keyframes ckout{to{opacity:0;transform:translate(-50%,-60%) scale(.9)}}
 @media (prefers-reduced-motion:reduce){.ckfx .pt{display:none}.ckbtn{animation:none}}
 
+.foldh{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;color:var(--tx);padding:6px 0;min-height:44px;text-align:left}
+.foldh h3{margin:0}
 /* 當日三行 */
 .erow{display:flex;align-items:center;gap:6px;margin-top:8px}
 .erow .add{box-shadow:0 2px 6px color-mix(in srgb,var(--c) 40%,transparent)}
@@ -1607,7 +1609,8 @@ function tasksHtml(){
   }
   if(T&&T.list){
     const wk=T.week;
-    h+=`<div class="card"><div class="row sp"><h3>本週任務</h3><span class="mu">週日結算，下週一領獎勵</span></div><div style="margin-top:4px">`+
+    const nd=T.list.filter(t=>taskStat(t,wk).ok).length;
+    h+=`<div class="card">${foldBtn('tasks','本週任務',pfold.tasks?'週日結算，下週一領獎勵':'目前 '+nd+' / '+T.list.length+' 項沒問題')}`+(!pfold.tasks?'</div>':`<div style="margin-top:4px">`+
     T.list.map(t=>{
       const st=taskStat(t,wk);let chip,cls,pct,col;
       if(t.kind==='checkin'){
@@ -1621,7 +1624,7 @@ function tasksHtml(){
       }
       return `<div class="task"><div class="tl"><span>${esc(taskLabel(t))}<span class="mu">　+${t.reward}</span></span><span class="tc ${cls}">${chip}</span></div>
         <div class="xp"><i style="width:${pct}%;background:${col}"></i></div></div>`;
-    }).join('')+`</div><div class="mu" style="margin-top:8px">任務是比額度再省一點的挑戰。沒有超過、而且這週有記帳或打開過，才算完成。</div></div>`;
+    }).join('')+`</div><div class="mu" style="margin-top:8px">任務是比額度再省一點的挑戰。沒有超過、而且這週有記帳或簽到過，才算完成。</div></div>`);
   }
   return h;
 }
@@ -1630,7 +1633,7 @@ function tasksHtml(){
 const tierOf=L=>Math.min(7,Math.floor((L-1)/3)+1);
 // [id, 名稱, 解鎖階級, 備用表情, 中心x, 底部y, 寬度]（座標以 400×299 的房間圖為準）
 const FURN=[
-  ['bed','床',1,'🛏️',104,240,112,0.903],['table','矮圓桌',1,'🪑',150,262,66,0.636],
+  ['bed','床',1,'🛏️',126,244,98,0.903],['table','矮圓桌',1,'🪑',150,262,66,0.636],
   ['cup_shelf','手搖杯置物架',2,'🥤',266,194,36,1.674],['cushion','坐墊',2,'🟣',172,268,38,0.911],
   ['piggybank','小豬撲滿',3,'🐷',150,236,28,0.992],['rug','圓地毯',3,'🟠',200,266,140,0.747],
   ['abacus','算盤',4,'🧮',236,266,34,1.006],['lamp','球形檯燈',4,'💡',318,232,15,3.025],
@@ -1638,6 +1641,8 @@ const FURN=[
   ['shield','盾牌',6,'🛡️',205,108,40,1.081],['bookshelf','矮書櫃',6,'📚',304,200,54,0.839],
   ['crown_stand','皇冠展示台',7,'👑',316,268,28,1.143],['trophy','獎盃',7,'🏆',304,157,22,0.953]
 ];
+const pfold={furn:false,tasks:true,xp:false};
+const foldBtn=(k,title,right)=>`<button class="foldh" onclick="pfold['${k}']=!pfold['${k}'];render()" aria-expanded="${pfold[k]}"><h3>${title}</h3><span class="mu">${right||''}　${pfold[k]?'收合 ▴':'展開 ▾'}</span></button>`;
 function roomNorm(){
   const P=S.pet;
   if(!P.room||typeof P.room!=='object')P.room={};
@@ -1666,10 +1671,10 @@ function roomHtml(){
     const lock=f[2]>T,on=!lock&&!R.off[f[0]],img=IMG['furn_'+f[0]];
     return `<button class="ropt ${on?'on':''} ${lock?'lock':''}" onclick="roomToggle('${f[0]}')">${img?`<img class="em" src="${img}" alt="">`:`<span class="em">${f[3]}</span>`}<b>${f[1]}</b><small>${lock?'🔒 '+TITLES[f[2]-1]:!img?'圖片製作中':on?'擺放中（再點收起）':'已收起（點一下擺出來）'}</small></button>`;
   }).join('');
-  return `<div class="card"><div class="row sp"><h3>小兔的房間</h3><span class="mu">已解鎖 ${got} / ${total}</span></div>
+  return `<div class="card"><h3>小兔的房間</h3>
     <div style="margin-top:8px">${roomSvg()}</div>
-    <div class="ropts" style="margin-top:10px">${cards}</div>
-    <div class="mu" style="margin-top:6px">每升一個稱號（每 3 級）解鎖 2 件新家具。</div></div>`;
+    <div style="margin-top:8px;border-top:1px solid var(--line)">${foldBtn('furn','家具一覽','已解鎖 '+got+' / '+total)}</div>
+    ${pfold.furn?`<div class="ropts" style="margin-top:4px">${cards}</div><div class="mu" style="margin-top:6px">每升一個稱號（每 3 級）解鎖 2 件新家具。</div>`:''}</div>`;
 }
 function roomToggle(id){
   const f=FURN.find(x=>x[0]===id),T=tierOf(petLevel(S.pet.exp)),R=S.pet.room;
@@ -1738,7 +1743,7 @@ function petPageHtml(){
       <div class="tile" style="--c:var(--c-cup)"><b>${st} 天</b><span>連續簽到</span></div>
       <div class="tile" style="--c:var(--c-acc)"><b>${P.winStreak} 期</b><span>達標連勝</span></div>
       <div class="tile" style="--c:var(--c-food)"><b>${P.exp}</b><span>累積經驗</span></div></div></div>
-    <div class="card"><h3>怎麼拿經驗</h3>
+    <div class="card">${foldBtn('xp','怎麼拿經驗','')}${pfold.xp?`
       <div class="kv" style="margin-top:6px"><span>每天點一下簽到</span><b>+10</b></div>
       <div class="kv"><span>連續簽到 7 / 14 / 30 天</span><b>+30 / 60 / 100</b></div>
       <div class="kv"><span>一週沒超支（每項）</span><b>+30</b></div>
@@ -1746,7 +1751,7 @@ function petPageHtml(){
       <div class="kv"><span>用不到一半額度</span><b>額外 +10 / +20</b></div>
       <div class="kv"><span>每連續達標 4 期</span><b>+50</b></div>
       <div class="kv"><span>每週任務</span><b>+15 ~ +20</b></div>
-      <div class="mu" style="margin-top:8px">超支不會扣經驗。整期沒有記錄也沒打開幾次，不算達標。</div></div>`;
+      <div class="mu" style="margin-top:8px">超支不會扣經驗。整期沒有記錄也沒簽到幾次，不算達標。</div>`:''}</div>`;
 }
 function syncHtml(){return MODE==='art'?`<div class="sync" id="sync">${esc(syncState)}</div>`:''}
 function render(){
