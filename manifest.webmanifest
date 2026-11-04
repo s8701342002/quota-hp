@@ -1,6 +1,6 @@
 {
-  "name": "額度血條",
-  "short_name": "額度血條",
+  "name": "花小兔的額度屋",
+  "short_name": "花小兔的額度屋",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
