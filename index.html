@@ -1218,7 +1218,8 @@ function initApp(){
   petTick();render();
   if(MODE==='art'){initDb();return}
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').then(r=>{try{r.update()}catch(e){}}).catch(()=>{});
+  if('serviceWorker' in navigator){let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloaded||!navigator.serviceWorker.controller)return;reloaded=true;if(!document.activeElement||document.activeElement.tagName==='BODY')location.reload()})}
 }
 
 /* ---- 週期計算（以選到的日期所在的那一期為準）---- */
@@ -1724,7 +1725,7 @@ function setPageHtml(){
    <div class="card"><h3>備份 / 還原</h3>${ioBody()}</div>
    <div class="card"><h3>清除資料</h3><div class="mu" style="margin:4px 0 8px">會刪掉全部紀錄、預約、設定，以及小兔的等級和經驗，無法復原。請先備份。</div>
     <button class="btn" style="background:${armReset?'var(--bad)':'var(--line)'};color:${armReset?'#fff':'var(--tx)'}" onclick="resetAll()">${armReset?'再按一次確定清除':'清除全部資料'}</button></div>`;
-  h+=`<div class="card"><h3>關於</h3><div class="mu" style="margin-top:4px">${MODE==='art'?'資料存在你的 Claude 帳號雲端，只有你看得到，手機和電腦同步。':'資料只存在這支手機的瀏覽器裡，不會上傳。清除網站資料會一併消失，請定期備份。'}</div></div>`;
+  h+=`<div class="card"><h3>關於</h3><div class="mu" style="margin-top:4px">版本 11/05 02:04<br>${MODE==='art'?'資料存在你的 Claude 帳號雲端，只有你看得到，手機和電腦同步。':'資料只存在這支手機的瀏覽器裡，不會上傳。清除網站資料會一併消失，請定期備份。'}</div></div>`;
   return h;
 }
 function tasksHtml(){
