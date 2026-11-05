@@ -1586,7 +1586,7 @@ const ICON={
   life:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
   set:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>'
 };
-const PAGES=[['home','首頁'],['life','健康'],['pet','花小兔的家'],['set','設定']];
+const PAGES=[['home','首頁'],['life','保健'],['pet','花小兔的家'],['set','設定']];
 const HOME_PAGES=['home','log','stats'];
 function homeSeg(){
   return `<div class="seg" style="margin-bottom:12px">`+[['home','今日'],['log','紀錄'],['stats','統計']].map(([k,n])=>`<button class="${page===k?'on':''}" onclick="go('${k}')">${n}</button>`).join('')+`</div>`;
@@ -1723,7 +1723,7 @@ function setPageHtml(){
    <div class="card"><h3>顯示項目</h3>
     <div class="mu" style="margin:4px 0 6px">點一列就收起來或顯示。用不到的先收起來，畫面比較乾淨，資料不會刪掉。</div>
     <div class="hgrp">記帳</div>${KEYS.map(c=>hideRow(c,ico(c),CATS[c].name)).join('')}
-    <div class="hgrp">健康（全部收起來，底部的「健康」也會不見）</div>${Object.keys(L.CATS).map(c=>hideRow('l_'+c,L.CATS[c].icon,L.CATS[c].name)).join('')}${hideRow('l_shot','💉','藥')}</div>
+    <div class="hgrp">保健（全部收起來，底部的「保健」也會不見）</div>${Object.keys(L.CATS).map(c=>hideRow('l_'+c,L.CATS[c].icon,L.CATS[c].name)).join('')}${hideRow('l_shot','💉','藥')}</div>
    <div class="card"><h3>各項額度</h3>
     <div class="mu" style="margin:4px 0 8px">週期和額度，回首頁點卡片右邊的「設定」修改。</div>
     ${VK().map(c=>{const D=S.cats[c];return `<div class="kv"><span>${ico(c)} ${CATS[c].name}</span><b>每${D.period==='week'?'週':'月'} ${fmt(c,D.limit)}</b></div>`}).join('')}</div>
@@ -1734,7 +1734,7 @@ function setPageHtml(){
    <div class="card"><h3>備份 / 還原</h3>${ioBody()}</div>
    <div class="card"><h3>清除資料</h3><div class="mu" style="margin:4px 0 8px">會刪掉全部紀錄、預約、設定，以及小兔的等級和經驗，無法復原。請先備份。</div>
     <button class="btn" style="background:${armReset?'var(--bad)':'var(--line)'};color:${armReset?'#fff':'var(--tx)'}" onclick="resetAll()">${armReset?'再按一次確定清除':'清除全部資料'}</button></div>`;
-  h+=`<div class="card"><h3>關於</h3><div class="mu" style="margin-top:4px">版本 11/05 22:50<br>${MODE==='art'?'資料存在你的 Claude 帳號雲端，只有你看得到，手機和電腦同步。':'資料只存在這支手機的瀏覽器裡，不會上傳。清除網站資料會一併消失，請定期備份。'}</div></div>`;
+  h+=`<div class="card"><h3>關於</h3><div class="mu" style="margin-top:4px">版本 11/06 06:57<br>${MODE==='art'?'資料存在你的 Claude 帳號雲端，只有你看得到，手機和電腦同步。':'資料只存在這支手機的瀏覽器裡，不會上傳。清除網站資料會一併消失，請定期備份。'}</div></div>`;
   return h;
 }
 function tasksHtml(){
