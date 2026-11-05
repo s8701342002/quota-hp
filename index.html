@@ -446,7 +446,7 @@ function norm(){
   P.claims=Array.isArray(P.claims)?P.claims:[];
   L.norm();
 }
-/* ===== 健康(睡眠、飲食、運動、喝水、猛健樂)。資料放在 S.life,跟額度屋一起存/同步 ===== */
+/* ===== 健康(睡眠、飲食、運動、喝水、保健)。資料放在 S.life,跟額度屋一起存/同步 ===== */
 const L = (() => {
 const CATS = {
   sleep: { name: '睡眠', icon: '🌙' },
@@ -1060,7 +1060,7 @@ function delWeight(k) {
   if (armed !== 'w' + k) { armed = 'w' + k; render(); return; }
   delete LS().weightLog[k]; armed = null; persist(); render();
 }
-/* ---- 猛健樂(tirzepatide)施打紀錄:劑量、部位、備註,每週一針 ---- */
+/* ---- 保健(tirzepatide 等週打針劑)施打紀錄:劑量、部位、備註,每週一針 ---- */
 const SHOT_DOSES = [2.5, 5, 7.5, 10, 12.5, 15];
 const SHOT_SITES = ['腹部左', '腹部右', '大腿左', '大腿右', '上臂左', '上臂右'];
 const shotsSorted = () => LS().shots.slice().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id);
@@ -1103,7 +1103,7 @@ function shotCardHtml() {
   const row = x => `<div class="eitem"><span>${md(x.date)}　${mgFmt(x.mg)}・${esc(x.site || '未記部位')}${x.note ? '　' + esc(x.note) : ''}</span><span class="row">
     <button class="x ${armed === 'sh' + x.id ? 'arm' : ''}" onclick="L.delShot(${x.id})" aria-label="刪除">${armed === 'sh' + x.id ? '確定刪除' : '✕'}</button></span></div>`;
   let h = `<div class="card cat open" style="--c:var(--c-lshot)"><div class="bar nomas" style="display:flex;align-items:center;gap:10px"><span class="bm" style="font-size:28px">💉</span>
-    <span class="bn" style="flex:1"><b style="font-size:15px">猛健樂</b><span class="mu" style="display:block">${status}</span></span>
+    <span class="bn" style="flex:1"><b style="font-size:15px">保健</b><span class="mu" style="display:block">${status}</span></span>
     ${due ? `<b style="font-size:14px;text-align:right;color:${last && dayDiff(addDays(last.date, 7), tk) < 0 ? 'var(--bad)' : 'var(--tx)'}">${due}</b>` : ''}</div>
     <div class="catbody"><div class="erow"><select id="shmg" style="flex:1" onchange="L.setv('shotMg',this.value)" aria-label="劑量">${doseOpts}</select>
       <select id="shsite" style="flex:1.3" onchange="L.setv('shotSite',this.value)" aria-label="部位">${siteOpts}</select></div>
@@ -1723,7 +1723,7 @@ function setPageHtml(){
    <div class="card"><h3>顯示項目</h3>
     <div class="mu" style="margin:4px 0 6px">點一列就收起來或顯示。用不到的先收起來，畫面比較乾淨，資料不會刪掉。</div>
     <div class="hgrp">記帳</div>${KEYS.map(c=>hideRow(c,ico(c),CATS[c].name)).join('')}
-    <div class="hgrp">健康（全部收起來，底部的「健康」也會不見）</div>${Object.keys(L.CATS).map(c=>hideRow('l_'+c,L.CATS[c].icon,L.CATS[c].name)).join('')}${hideRow('l_shot','💉','猛健樂')}</div>
+    <div class="hgrp">健康（全部收起來，底部的「健康」也會不見）</div>${Object.keys(L.CATS).map(c=>hideRow('l_'+c,L.CATS[c].icon,L.CATS[c].name)).join('')}${hideRow('l_shot','💉','保健')}</div>
    <div class="card"><h3>各項額度</h3>
     <div class="mu" style="margin:4px 0 8px">週期和額度，回首頁點卡片右邊的「設定」修改。</div>
     ${VK().map(c=>{const D=S.cats[c];return `<div class="kv"><span>${ico(c)} ${CATS[c].name}</span><b>每${D.period==='week'?'週':'月'} ${fmt(c,D.limit)}</b></div>`}).join('')}</div>
@@ -1734,7 +1734,7 @@ function setPageHtml(){
    <div class="card"><h3>備份 / 還原</h3>${ioBody()}</div>
    <div class="card"><h3>清除資料</h3><div class="mu" style="margin:4px 0 8px">會刪掉全部紀錄、預約、設定，以及小兔的等級和經驗，無法復原。請先備份。</div>
     <button class="btn" style="background:${armReset?'var(--bad)':'var(--line)'};color:${armReset?'#fff':'var(--tx)'}" onclick="resetAll()">${armReset?'再按一次確定清除':'清除全部資料'}</button></div>`;
-  h+=`<div class="card"><h3>關於</h3><div class="mu" style="margin-top:4px">版本 11/05 12:29<br>${MODE==='art'?'資料存在你的 Claude 帳號雲端，只有你看得到，手機和電腦同步。':'資料只存在這支手機的瀏覽器裡，不會上傳。清除網站資料會一併消失，請定期備份。'}</div></div>`;
+  h+=`<div class="card"><h3>關於</h3><div class="mu" style="margin-top:4px">版本 11/05 22:47<br>${MODE==='art'?'資料存在你的 Claude 帳號雲端，只有你看得到，手機和電腦同步。':'資料只存在這支手機的瀏覽器裡，不會上傳。清除網站資料會一併消失，請定期備份。'}</div></div>`;
   return h;
 }
 function tasksHtml(){
