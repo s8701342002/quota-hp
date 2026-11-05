@@ -1725,7 +1725,7 @@ function setPageHtml(){
    <div class="card"><h3>備份 / 還原</h3>${ioBody()}</div>
    <div class="card"><h3>清除資料</h3><div class="mu" style="margin:4px 0 8px">會刪掉全部紀錄、預約、設定，以及小兔的等級和經驗，無法復原。請先備份。</div>
     <button class="btn" style="background:${armReset?'var(--bad)':'var(--line)'};color:${armReset?'#fff':'var(--tx)'}" onclick="resetAll()">${armReset?'再按一次確定清除':'清除全部資料'}</button></div>`;
-  h+=`<div class="card"><h3>關於</h3><div class="mu" style="margin-top:4px">版本 11/05 02:04<br>${MODE==='art'?'資料存在你的 Claude 帳號雲端，只有你看得到，手機和電腦同步。':'資料只存在這支手機的瀏覽器裡，不會上傳。清除網站資料會一併消失，請定期備份。'}</div></div>`;
+  h+=`<div class="card"><h3>關於</h3><div class="mu" style="margin-top:4px">版本 11/05 10:46<br>${MODE==='art'?'資料存在你的 Claude 帳號雲端，只有你看得到，手機和電腦同步。':'資料只存在這支手機的瀏覽器裡，不會上傳。清除網站資料會一併消失，請定期備份。'}</div></div>`;
   return h;
 }
 function tasksHtml(){
@@ -1795,14 +1795,107 @@ function roomSvg(){
   const items=FURN.filter(f=>f[8]===rm[0]&&f[2]<=T&&!R.off[f[0]]&&IMG['furn_'+f[0]]).map(f=>({f,z:f[0]==='rug'?-1:f[5]}));
   const draw=o=>{
     const f=o.f,img=IMG['furn_'+f[0]];
-    if(img){const w=f[6],h=Math.round(w*f[7]);g+=`<image href="${img}" x="${f[4]-w/2}" y="${f[5]-h}" width="${w}" height="${h}"/>`}
-    else g+=`<text x="${f[4]}" y="${f[5]-2}" text-anchor="middle" font-size="${Math.round(f[6]*0.8)}">${f[3]}</text>`;
+    if(img){const w=f[6],h=Math.round(w*f[7]);g+=`<image data-z="${o.z}" href="${img}" x="${f[4]-w/2}" y="${f[5]-h}" width="${w}" height="${h}"/>`}
+    else g+=`<text data-z="${o.z}" x="${f[4]}" y="${f[5]-2}" text-anchor="middle" font-size="${Math.round(f[6]*0.8)}">${f[3]}</text>`;
   };
-  items.filter(o=>o.z<252).sort((a,b)=>a.z-b.z).forEach(draw);
-  g+=im?`<image href="${im}" x="152" y="136" width="96" height="110" preserveAspectRatio="xMidYMax meet"/>`:`<text x="200" y="230" text-anchor="middle" font-size="70">🐰</text>`;
-  items.filter(o=>o.z>=252).forEach(draw);
+  bunPlace(items.map(o=>o.f));
+  items.sort((a,b)=>a.z-b.z);
+  let bunDone=false;
+  const bunDraw=()=>{bunDone=true;g+=`<g id="bun" onclick="bunPoke()" style="cursor:pointer" transform="translate(${BUN.x} ${BUN.y})">`+
+    (im?`<image href="${im}" x="-48" y="-110" width="96" height="110" preserveAspectRatio="xMidYMax meet"/>`:`<text y="-30" text-anchor="middle" font-size="70">🐰</text>`)+`</g>`};
+  items.forEach(o=>{if(!bunDone&&o.z>BUN.y)bunDraw();draw(o)});
+  if(!bunDone)bunDraw();
+  g+=`<text id="bunfx" text-anchor="middle" font-size="18" opacity="0" pointer-events="none">💗</text>`;
   return g+'</svg>';
 }
+/* ---- 花小兔在房間裡走動、點一下會跳 ---- */
+const BUN={x:200,y:246,tx:200,ty:246,dir:1,wait:1.5,t:0,hop:0,fx:0,rects:[],pose:0};
+const BUN_DIM={},BUN_POSE=['cup','food','sleep','move','meal','shop'];
+const BUN_BLOCK=['bed','table','lamp','cup_shelf','crown_stand','bookshelf','desk','plant'];
+function bunHit(x,y){return BUN.rects.some(r=>x>r[0]&&x<r[1]&&y>r[2]&&y<r[3])}
+function bunPlace(fs){
+  BUN.rects=fs.filter(f=>BUN_BLOCK.includes(f[0])).map(f=>[f[4]-f[6]/2-8,f[4]+f[6]/2+8,f[5]-12,f[5]+4]);
+  if(bunHit(BUN.x,BUN.y)){
+    for(let i=0;i<40;i++){const x=90+Math.random()*220,y=224+Math.random()*38;if(!bunHit(x,y)){BUN.x=BUN.tx=x;BUN.y=BUN.ty=y;break}}
+  }
+}
+function bunPick(){
+  for(let i=0;i<14;i++){
+    const x=90+Math.random()*220,y=224+Math.random()*38;
+    if(bunHit(x,y))continue;
+    let ok=true;for(let k=1;k<=12;k++){if(bunHit(BUN.x+(x-BUN.x)*k/12,BUN.y+(y-BUN.y)*k/12)){ok=false;break}}
+    if(ok){BUN.tx=x;BUN.ty=y;return true}
+  }
+  return false;
+}
+function bunSet(src){
+  const im=document.querySelector('#bun image');if(!im||!src)return;
+  const set=(w,h)=>{const H=110,W=Math.min(130,H*w/h);im.setAttribute('x',-W/2);im.setAttribute('y',-H);im.setAttribute('width',W);im.setAttribute('height',H);im.setAttribute('href',src)};
+  const d=BUN_DIM[src];if(d)return set(d[0],d[1]);
+  const t=new Image();t.onload=()=>{BUN_DIM[src]=[t.naturalWidth,t.naturalHeight];set(t.naturalWidth,t.naturalHeight)};t.src=src;
+}
+/* 只有 Lv.1~3（沒穿造型）才有多張姿勢圖；穿造型後每階只有一張圖 */
+function bunPoseImg(mood){
+  if(tierOf(petLevel(S.pet.exp))>1)return null;
+  const cur=IMG['cup_'+petMood()],pool=BUN_POSE.map(k=>IMG[k+'_'+mood]).filter(x=>x&&x!==cur);
+  return pool.length?pool[Math.floor(Math.random()*pool.length)]:null;
+}
+function bunPose(mood,sec){
+  const im=bunPoseImg(mood);if(!im)return false;
+  bunSet(im);BUN.pose=sec;return true;
+}
+function bunPoke(){
+  if(BUN.hop>0)return;
+  BUN.hop=0.9;BUN.fx=1.2;BUN.tx=BUN.x;BUN.ty=BUN.y;BUN.wait=2.5;
+  bunPose('happy',2.2);
+}
+function bunZ(el){
+  const pv=el.previousElementSibling,nx=el.nextElementSibling;
+  const pz=pv&&pv.dataset.z!==undefined?+pv.dataset.z:-9,nz=nx&&nx.dataset.z!==undefined?+nx.dataset.z:1e9;
+  if(pz<=BUN.y&&nz>BUN.y)return;
+  const svg=el.parentNode;let at=null;
+  for(const c of svg.children){if(c!==el&&c.dataset.z!==undefined&&+c.dataset.z>BUN.y){at=c;break}}
+  if(at)svg.insertBefore(el,at);else svg.insertBefore(el,document.getElementById('bunfx'));
+}
+let bunLast=0;
+function bunLoop(){
+  const now=performance.now(),el=document.getElementById('bun');
+  if(!el){bunLast=0;return}
+  const dt=Math.min(0.05,bunLast?(now-bunLast)/1000:0.016);bunLast=now;BUN.t+=dt;
+  const still=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const sad=petMood()==='sad';
+  let walking=false,dy=0,rot=0,sy=1;
+  if(BUN.pose>0){BUN.pose-=dt;if(BUN.pose<=0){BUN.pose=0;bunSet(outfit(IMG['cup_'+petMood()]))}}
+  if(BUN.hop>0){
+    BUN.hop=Math.max(0,BUN.hop-dt);
+    dy=-Math.abs(Math.sin((0.9-BUN.hop)/0.9*Math.PI*2))*16;
+    sy=1+0.04*Math.sin(BUN.t*30);
+  }else if(!still){
+    const ddx=BUN.tx-BUN.x,ddy=BUN.ty-BUN.y,d=Math.hypot(ddx,ddy);
+    if(d>1.5){
+      walking=true;const sp=(sad?12:24)*dt;
+      BUN.x+=ddx/d*Math.min(sp,d);BUN.y+=ddy/d*Math.min(sp,d);
+      if(Math.abs(ddx)>2)BUN.dir=ddx>0?1:-1;
+      dy=-Math.abs(Math.sin(BUN.t*(sad?7:11)))*(sad?2:4);rot=Math.sin(BUN.t*(sad?7:11))*2.5;
+    }else{
+      BUN.wait-=dt;
+      if(BUN.wait<=0){
+        if(Math.random()<0.2&&bunPose(petMood(),10+Math.random()*5))BUN.wait=BUN.pose+0.5;
+        else{BUN.wait=(sad?3:1.2)+Math.random()*(sad?4:3);if(!bunPick())BUN.wait=1}
+      }
+    }
+  }
+  if(!walking&&!BUN.hop)sy=1+0.018*Math.sin(BUN.t*2.2);
+  el.setAttribute('transform',`translate(${BUN.x.toFixed(1)} ${(BUN.y+dy).toFixed(1)}) rotate(${rot.toFixed(1)}) scale(${BUN.dir} ${sy.toFixed(3)})`);
+  if(walking)bunZ(el);
+  const fx=document.getElementById('bunfx');
+  if(fx){
+    if(BUN.fx>0){BUN.fx=Math.max(0,BUN.fx-dt);const k=1-BUN.fx/1.2;
+      fx.setAttribute('x',(BUN.x+20).toFixed(1));fx.setAttribute('y',(BUN.y-95-k*22).toFixed(1));fx.setAttribute('opacity',(1-k).toFixed(2))}
+    else fx.setAttribute('opacity','0');
+  }
+}
+setInterval(bunLoop,33);
 function roomHtml(){
   roomNorm();
   const R=S.pet.room,L=petLevel(S.pet.exp),T=tierOf(L);
