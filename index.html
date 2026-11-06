@@ -457,7 +457,7 @@ const CATS = {
 const KEYS = Object.keys(CATS);
 const vis = c => !isHidden('l_' + c);
 const visK = () => KEYS.filter(vis);
-const anyVisible = () => visK().length > 0 || vis('shot');
+const anyVisible = () => visK().length > 0 || vis('supp');
 
 const pad = n => String(n).padStart(2, '0');
 const ds = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
@@ -469,7 +469,7 @@ const WD = ['日', '一', '二', '三', '四', '五', '六'];
 
 const LS = () => S.life;
 const today = () => ds(new Date());
-let stockOpen = false, shotMg = '', shotSite = '', sel = today(), view = 'day', setCat = '', msgCat = '', foodPick = false, picks = [], openK = {}, exSel = '', drinkSugar = '半糖', mealSel = '', armed = null, msg = '';
+let suppType = '保健品', stockOpen = false, shotMg = '', shotSite = '', sel = today(), view = 'day', setCat = '', msgCat = '', foodPick = false, picks = [], openK = {}, exSel = '', drinkSugar = '半糖', mealSel = '', armed = null, msg = '';
 const now = new Date();
 let logYM = [now.getFullYear(), now.getMonth()];
 
@@ -814,7 +814,7 @@ function logHtml() {
   const [y, m] = logYM, pre = y + '-' + pad(m + 1), dim = new Date(y, m + 1, 0).getDate();
   const days = [];
   for (let d = dim; d >= 1; d--) {
-    const k = pre + '-' + pad(d), sh = vis('sleep') ? sleepH(k) : null, kc = vis('food') ? kcalOf(k) : 0, w = vis('water') ? waterOf(k) : 0, ex = vis('exercise') ? exMin(k) : 0, sj = vis('shot') ? shotsOf(k) : [];
+    const k = pre + '-' + pad(d), sh = vis('sleep') ? sleepH(k) : null, kc = vis('food') ? kcalOf(k) : 0, w = vis('water') ? waterOf(k) : 0, ex = vis('exercise') ? exMin(k) : 0, sj = vis('supp') ? shotsOf(k) : [];
     if (sh != null || kc || w || ex || sj.length) days.push({ k, d, sh, kc, w, ex, sj });
   }
   const sl = days.filter(x => x.sh != null), fd = days.filter(x => x.kc);
@@ -939,6 +939,9 @@ function norm() {
   o.customFoods = Array.isArray(o.customFoods) ? o.customFoods : [];
   o.pens = Array.isArray(o.pens) ? o.pens.filter(x => x && x.date && x.mg > 0 && x.qty > 0) : [];
   o.shots = Array.isArray(o.shots) ? o.shots.filter(x => x && x.date && x.mg > 0) : [];
+  o.supps = Array.isArray(o.supps) ? o.supps.filter(x => x && x.id && x.name) : [];
+  if (!o.suppMig) { o.suppMig = true; if ((o.shots.length || o.pens.length) && !o.supps.some(x => x.type === '針')) o.supps.push({ id: 1, name: '猛健樂', dose: '', type: '針' }); } // 舊的針劑紀錄只轉一次,之後刪掉就不會再出現
+  o.suppLog = o.suppLog && typeof o.suppLog === 'object' ? o.suppLog : {};
 }
 /* ---- 統計頁 ---- */
 let stN = 14;
@@ -1060,8 +1063,11 @@ function delWeight(k) {
   if (armed !== 'w' + k) { armed = 'w' + k; render(); return; }
   delete LS().weightLog[k]; armed = null; persist(); render();
 }
-/* ---- 藥(tirzepatide 等週打針劑)施打紀錄:劑量、部位、備註,每週一針 ---- */
-const SHOT_DOSES = [2.5, 5, 7.5, 10, 12.5, 15];
+/* ---- 針(tirzepatide 等週打針劑)施打紀錄:劑量、部位、備註,每週一針 ---- */
+const SHOT_BASE = [2.5, 5, 7.5, 10, 12.5, 15];
+// 常用劑量 + 針項目裡自己填的 mg
+const shotDoses = () => [...new Set(SHOT_BASE.concat(LS().supps.filter(x => x.type === '針').map(x => parseFloat(x.dose)).filter(v => v > 0)))].sort((a, b) => a - b);
+const shotName = () => { const x = LS().supps.find(x => x.type === '針'); return x ? x.name : '針'; };
 const SHOT_SITES = ['腹部左', '腹部右', '大腿左', '大腿右', '上臂左', '上臂右'];
 const shotsSorted = () => LS().shots.slice().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id);
 const shotsOf = k => LS().shots.filter(x => x.date === k);
@@ -1091,19 +1097,19 @@ function shotCardHtml() {
     status = `上次 ${md(last.date)}・${mgFmt(last.mg)}・${esc(last.site || '未記部位')}`;
     due = left > 0 ? `下次 ${md(nxt)}(${left} 天後)` : left === 0 ? '今天該打了' : `已超過 ${-left} 天`;
   }
-  const mg = +shotMg || (last ? last.mg : SHOT_DOSES[0]);
+  const mg = +shotMg || (last ? last.mg : shotDoses()[0]);
   const lastIdx = last ? SHOT_SITES.indexOf(last.site) : -1;
   const site = shotSite || SHOT_SITES[(lastIdx + 1) % SHOT_SITES.length];
   const total = all.reduce((a, x) => a + x.mg, 0);
   const W = LS().weightLog, wk = Object.keys(W).sort(), first = all[0];
   const w0 = first ? wk.find(k => k >= first.date) : null, w1 = wk.length ? wk[wk.length - 1] : null;
   const wtxt = w0 && w1 && w0 !== w1 ? `・體重 ${W[w0].toFixed(1)} → ${W[w1].toFixed(1)} kg(${W[w1] - W[w0] > 0 ? '+' : ''}${(W[w1] - W[w0]).toFixed(1)})` : '';
-  const doseOpts = SHOT_DOSES.map(d => `<option value="${d}" ${d === mg ? 'selected' : ''}>${d} mg</option>`).join('');
+  const doseOpts = shotDoses().map(d => `<option value="${d}" ${d === mg ? 'selected' : ''}>${d} mg</option>`).join('');
   const siteOpts = SHOT_SITES.map(x => `<option ${x === site ? 'selected' : ''}>${x}</option>`).join('');
   const row = x => `<div class="eitem"><span>${md(x.date)}　${mgFmt(x.mg)}・${esc(x.site || '未記部位')}${x.note ? '　' + esc(x.note) : ''}</span><span class="row">
     <button class="x ${armed === 'sh' + x.id ? 'arm' : ''}" onclick="L.delShot(${x.id})" aria-label="刪除">${armed === 'sh' + x.id ? '確定刪除' : '✕'}</button></span></div>`;
   let h = `<div class="card cat open" style="--c:var(--c-lshot)"><div class="bar nomas" style="display:flex;align-items:center;gap:10px"><span class="bm" style="font-size:28px">💉</span>
-    <span class="bn" style="flex:1"><b style="font-size:15px">藥</b><span class="mu" style="display:block">${status}</span></span>
+    <span class="bn" style="flex:1"><b style="font-size:15px">${esc(shotName())}</b><span class="mu" style="display:block">${status}</span></span>
     ${due ? `<b style="font-size:14px;text-align:right;color:${last && dayDiff(addDays(last.date, 7), tk) < 0 ? 'var(--bad)' : 'var(--tx)'}">${due}</b>` : ''}</div>
     <div class="catbody"><div class="erow"><select id="shmg" style="flex:1" onchange="L.setv('shotMg',this.value)" aria-label="劑量">${doseOpts}</select>
       <select id="shsite" style="flex:1.3" onchange="L.setv('shotSite',this.value)" aria-label="部位">${siteOpts}</select></div>
@@ -1119,7 +1125,7 @@ function shotCardHtml() {
   h += `<button class="pickbtn" style="margin-top:6px;--c:var(--c-lshot)" onclick="L.toggleStock()">${stockOpen ? '收起入庫 ▴' : '＋ 入庫(買了幾支筆) ▾'}</button>`;
   if (stockOpen) {
     const pens = LS().pens.slice().sort((a, b) => b.date < a.date ? -1 : b.date > a.date ? 1 : b.id - a.id).slice(0, 5);
-    h += `<div class="erow"><select id="pgmg" style="flex:1" aria-label="筆的劑量">${SHOT_DOSES.map(d => `<option value="${d}" ${d === mg ? 'selected' : ''}>${d} mg</option>`).join('')}</select>
+    h += `<div class="erow"><select id="pgmg" style="flex:1" aria-label="筆的劑量">${shotDoses().map(d => `<option value="${d}" ${d === mg ? 'selected' : ''}>${d} mg</option>`).join('')}</select>
       <input id="pgqty" type="number" inputmode="numeric" min="1" value="1" style="flex:1" aria-label="支數" onkeydown="if(event.key==='Enter')L.addPen()">
       <button class="add" onclick="L.addPen()">入庫</button></div>
       <div class="mu" style="margin-top:4px">一支筆 = ${PEN_DOSES} 針,日期用上面選的那天。</div>`
@@ -1158,19 +1164,55 @@ function delShot(id) {
   if (armed !== 'sh' + id) { armed = 'sh' + id; render(); return; }
   LS().shots = LS().shots.filter(x => x.id !== id); armed = null; persist(); render();
 }
+/* ---- 保健品/藥/針:自己新增項目,每天勾「吃了/打了」 ---- */
+const SUPP_TYPES = { '保健品': '💊', '藥': '💊', '針': '💉' };
+const suppDone = (k, id) => (LS().suppLog[k] || []).includes(id);
+function suppCardHtml() {
+  const list = LS().supps, chk = list.filter(x => x.type !== '針'), n = chk.filter(x => suppDone(sel, x.id)).length;
+  const row = x => { const on = suppDone(sel, x.id), a = armed === 'sp' + x.id;
+    return `<div class="eitem"><span>${SUPP_TYPES[x.type] || '💊'} <b>${esc(x.name)}</b>${x.dose ? '　' + esc(x.dose) + (x.type === '針' && /^[\d.]+$/.test(x.dose) ? ' mg' : '') : ''}<span class="mu">　${esc(x.type)}</span></span><span class="row">
+    ${x.type === '針' ? '<span class="mu">下方記錄</span>' : `<button class="add" style="${on ? 'opacity:.55' : ''}" onclick="L.toggleSupp(${x.id})">${on ? '✓ 已吃' : '吃了'}</button>`}
+    <button class="x ${a ? 'arm' : ''}" onclick="L.delSupp(${x.id})" aria-label="刪除">${a ? '確定刪除' : '✕'}</button></span></div>`; };
+  let h = `<div class="card cat open" style="--c:var(--c-lshot)"><div class="bar nomas" style="display:flex;align-items:center;gap:10px"><span class="bm" style="font-size:28px">💊</span>
+    <span class="bn" style="flex:1"><b style="font-size:15px">保健品</b><span class="mu" style="display:block">${list.length ? (chk.length ? dayLabel() + ' 已吃 ' + n + ' / ' + chk.length : '新增「針」會出現劑量、庫存追蹤') : '還沒有項目,在下面新增(選「針」會有劑量和庫存追蹤)'}</span></span></div>
+    <div class="catbody">` + (list.length ? list.map(row).join('') : '') + `
+    <div class="erow" style="margin-top:6px"><select id="sptype" style="flex:1" onchange="L.setv('suppType',this.value);document.getElementById('spdose').placeholder=this.value==='針'?'劑量 mg(如 2.5)':'份量(1 顆、2 錠…可不填)'" aria-label="種類">${Object.keys(SUPP_TYPES).map(t => `<option ${t === suppType ? 'selected' : ''}>${t}</option>`).join('')}</select>
+      <input id="spname" placeholder="名稱(魚油、維他命D…)" autocomplete="off" style="flex:2" onkeydown="if(event.key==='Enter')L.addSupp()"></div>
+    <div class="erow"><input id="spdose" placeholder="${suppType === '針' ? '劑量 mg(如 2.5)' : '份量(1 顆、2 錠…可不填)'}" autocomplete="off" style="flex:1" onkeydown="if(event.key==='Enter')L.addSupp()">
+      <button class="add" onclick="L.addSupp()">新增</button></div>`;
+  if (msg && msgCat === 'supp') h += `<div class="note bad">${esc(msg)}</div>`;
+  return h + '</div></div>';
+}
+function addSupp() {
+  const name = document.getElementById('spname').value.trim(), dose = document.getElementById('spdose').value.trim(), type = document.getElementById('sptype').value;
+  if (!name) { msg = '請輸入名稱'; msgCat = 'supp'; render(); return; }
+  LS().supps.push({ id: Date.now(), name, dose, type }); suppType = type; msg = ''; persist(); render(); toast('已新增' + type + ':' + name);
+}
+function toggleSupp(id) {
+  const l = LS().suppLog[sel] || (LS().suppLog[sel] = []), i = l.indexOf(id);
+  if (i >= 0) l.splice(i, 1); else l.push(id);
+  if (!l.length) delete LS().suppLog[sel];
+  persist(); render();
+}
+function delSupp(id) {
+  if (armed !== 'sp' + id) { armed = 'sp' + id; render(); return; }
+  LS().supps = LS().supps.filter(x => x.id !== id);
+  for (const k in LS().suppLog) { LS().suppLog[k] = LS().suppLog[k].filter(v => v !== id); if (!LS().suppLog[k].length) delete LS().suppLog[k]; }
+  armed = null; persist(); render();
+}
 function setStN(n) { stN = n; render(); }
 function html() {
   const tab = (k, n) => `<button class="${view === k ? 'on' : ''}" onclick="L.setView('${k}')">${n}</button>`;
   return `<div class="life"><h2 class="ptitle">健康</h2><div class="seg" style="margin-bottom:12px">${tab('day', '今日')}${tab('log', '紀錄')}${tab('stats', '統計')}</div>`
-    + (view === 'log' ? logHtml() : view === 'stats' ? statsHtml() : weekHtml() + catsHtml() + (vis('shot') ? shotCardHtml() : '') + weightCardHtml()) + `</div>`;
+    + (view === 'log' ? logHtml() : view === 'stats' ? statsHtml() : weekHtml() + catsHtml() + (vis('supp') ? suppCardHtml() + (LS().supps.some(x => x.type === '針') ? shotCardHtml() : '') : '') + weightCardHtml()) + `</div>`;
 }
 function setView(k) { view = k; armed = null; msg = ''; render(); window.scrollTo(0, 0); }
-function setv(k, v) { if (k === 'mealSel') mealSel = v; else if (k === 'exSel') exSel = v; else if (k === 'shotMg') shotMg = v; else if (k === 'shotSite') shotSite = v; }
+function setv(k, v) { if (k === 'mealSel') mealSel = v; else if (k === 'exSel') exSel = v; else if (k === 'shotMg') shotMg = v; else if (k === 'shotSite') shotSite = v; else if (k === 'suppType') suppType = v; }
 function togglePick() { foodPick = !foodPick; render(); }
 function setSugar(k) { drinkSugar = k; render(); }
 function goDate(k) { sel = k; view = 'day'; render(); window.scrollTo(0, 0); }
 
-return { CATS, anyVisible, addCustomFood, addEx, addFood, addWater, allFoods, catsHtml, dayLabel, delCustomFood, delEx, delFood, delSleep, exRank, exStreak, exTotalDays, exWeekDays, exerciseBody, foodBody, gear, goDate, goalKcal, health, html, itemsOf, logHtml, logMove, norm, pctColor, pick, pickFood, picksName, planFor, prevSleep, restartPlan, saveSleep, setExGoal, setProf, setSleep, setSugar, setView, setWaterGoal, settingsHtml, setv, shift, shiftDay, sleepBody, statRows, timeSel, toast, toggleK, togglePick, unpick, waterBody, weekHtml, today, saveWeight, delWeight, setStN, statsHtml, addShot, delShot, shotCardHtml, addPen, delPen, toggleStock };
+return { CATS, anyVisible, addCustomFood, addEx, addFood, addWater, allFoods, catsHtml, dayLabel, delCustomFood, delEx, delFood, delSleep, exRank, exStreak, exTotalDays, exWeekDays, exerciseBody, foodBody, gear, goDate, goalKcal, health, html, itemsOf, logHtml, logMove, norm, pctColor, pick, pickFood, picksName, planFor, prevSleep, restartPlan, saveSleep, setExGoal, setProf, setSleep, setSugar, setView, setWaterGoal, settingsHtml, setv, shift, shiftDay, sleepBody, statRows, timeSel, toast, toggleK, togglePick, unpick, waterBody, weekHtml, today, saveWeight, delWeight, setStN, statsHtml, addShot, delShot, shotCardHtml, addPen, delPen, toggleStock, addSupp, toggleSupp, delSupp };
 })();
 
 norm();
@@ -1723,7 +1765,7 @@ function setPageHtml(){
    <div class="card"><h3>顯示項目</h3>
     <div class="mu" style="margin:4px 0 6px">點一列就收起來或顯示。用不到的先收起來，畫面比較乾淨，資料不會刪掉。</div>
     <div class="hgrp">記帳</div>${KEYS.map(c=>hideRow(c,ico(c),CATS[c].name)).join('')}
-    <div class="hgrp">保健（全部收起來，底部的「保健」也會不見）</div>${Object.keys(L.CATS).map(c=>hideRow('l_'+c,L.CATS[c].icon,L.CATS[c].name)).join('')}${hideRow('l_shot','💉','藥')}</div>
+    <div class="hgrp">保健（全部收起來，底部的「保健」也會不見）</div>${Object.keys(L.CATS).map(c=>hideRow('l_'+c,L.CATS[c].icon,L.CATS[c].name)).join('')}${hideRow('l_supp','💊','保健品')}</div>
    <div class="card"><h3>各項額度</h3>
     <div class="mu" style="margin:4px 0 8px">週期和額度，回首頁點卡片右邊的「設定」修改。</div>
     ${VK().map(c=>{const D=S.cats[c];return `<div class="kv"><span>${ico(c)} ${CATS[c].name}</span><b>每${D.period==='week'?'週':'月'} ${fmt(c,D.limit)}</b></div>`}).join('')}</div>
@@ -1734,7 +1776,7 @@ function setPageHtml(){
    <div class="card"><h3>備份 / 還原</h3>${ioBody()}</div>
    <div class="card"><h3>清除資料</h3><div class="mu" style="margin:4px 0 8px">會刪掉全部紀錄、預約、設定，以及小兔的等級和經驗，無法復原。請先備份。</div>
     <button class="btn" style="background:${armReset?'var(--bad)':'var(--line)'};color:${armReset?'#fff':'var(--tx)'}" onclick="resetAll()">${armReset?'再按一次確定清除':'清除全部資料'}</button></div>`;
-  h+=`<div class="card"><h3>關於</h3><div class="mu" style="margin-top:4px">版本 11/06 06:57<br>${MODE==='art'?'資料存在你的 Claude 帳號雲端，只有你看得到，手機和電腦同步。':'資料只存在這支手機的瀏覽器裡，不會上傳。清除網站資料會一併消失，請定期備份。'}</div></div>`;
+  h+=`<div class="card"><h3>關於</h3><div class="mu" style="margin-top:4px">版本 11/06 23:10<br>${MODE==='art'?'資料存在你的 Claude 帳號雲端，只有你看得到，手機和電腦同步。':'資料只存在這支手機的瀏覽器裡，不會上傳。清除網站資料會一併消失，請定期備份。'}</div></div>`;
   return h;
 }
 function tasksHtml(){
